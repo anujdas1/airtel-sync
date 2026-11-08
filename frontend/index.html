@@ -272,10 +272,24 @@
       const recognitionRef = useRef(null);
       const silenceTimerRef = useRef(null);
       const transcriptRef = useRef("");
+      const micPermissionGrantedRef = useRef(false);
 
       useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, [messages, loading]);
+
+      useEffect(() => {
+        if (typeof navigator !== "undefined" && navigator.permissions && navigator.permissions.query) {
+          navigator.permissions.query({ name: "microphone" }).then(res => {
+            if (res.state === "granted") {
+              micPermissionGrantedRef.current = true;
+            }
+            res.onchange = () => {
+              micPermissionGrantedRef.current = (res.state === "granted");
+            };
+          }).catch(() => {});
+        }
+      }, []);
 
       const handleSend = async (customText) => {
         const userText = customText || input;
@@ -381,8 +395,26 @@
         }
       };
 
+      // Ensure one-time microphone permission is permanently recorded for origin
+      const ensureMicrophonePermission = async () => {
+        if (micPermissionGrantedRef.current) return true;
+        if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Release stream tracks immediately so hardware LED indicator shuts off
+            stream.getTracks().forEach(track => track.stop());
+            micPermissionGrantedRef.current = true;
+            return true;
+          } catch (err) {
+            console.warn("Microphone permission not granted:", err);
+            return false;
+          }
+        }
+        return true;
+      };
+
       // Voice Input STT — Full-Sentence Speech Recognition with Silence Detection
-      const toggleVoice = () => {
+      const toggleVoice = async () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
           alert("Speech recognition is supported in Google Chrome, Microsoft Edge, and Safari.");
@@ -395,12 +427,25 @@
           return;
         }
 
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;      // CRITICAL: keeps listening to full sentence, doesn't stop after 1st word
-          recognition.interimResults = true;  // CRITICAL: updates live transcription smoothly as words are spoken
-          recognition.lang = language === "Hindi" ? "hi-IN" : "en-IN";
+        // Ensure origin-level microphone permission once (Chrome saves this permanently for http://localhost:8000)
+        if (!micPermissionGrantedRef.current) {
+          const granted = await ensureMicrophonePermission();
+          if (!granted) {
+            alert("Microphone access was denied. Please allow microphone permission in your browser address bar.");
+            return;
+          }
+        }
 
+        try {
+          if (!recognitionRef.current) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;      // CRITICAL: keeps listening to full sentence, doesn't stop after 1st word
+            recognition.interimResults = true;  // CRITICAL: updates live transcription smoothly as words are spoken
+            recognitionRef.current = recognition;
+          }
+
+          const recognition = recognitionRef.current;
+          recognition.lang = language === "Hindi" ? "hi-IN" : "en-IN";
           transcriptRef.current = "";
 
           recognition.onstart = () => {
@@ -453,7 +498,6 @@
             }
           };
 
-          recognitionRef.current = recognition;
           recognition.start();
         } catch (err) {
           console.error("Could not start speech recognition:", err);

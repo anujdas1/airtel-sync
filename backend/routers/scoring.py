@@ -65,7 +65,7 @@ def get_lead_score(lead_id: str):
     if tier == "Hot":
         action = "Call immediately within 2 hours. High closing probability."
     elif tier == "Warm":
-        action = "Send WhatsApp bundle quote with 1-click checkout link."
+        action = "Send digital bundle quote with 1-click checkout link."
     else:
         action = "Nurture with automated email and SMS product catalogue."
 

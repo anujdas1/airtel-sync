@@ -246,7 +246,6 @@
     // 1. AI ADVISOR VIEW
     // ==========================================
     function AdvisorView({ language, onApplyBundle }) {
-      const [mode, setMode] = useState("web"); // web or whatsapp
       const [messages, setMessages] = useState([
         {
           sender: "bot",
@@ -406,33 +405,35 @@
               </div>
             </div>
 
-            {/* Mode Switcher */}
+            {/* Smart Assistant Capabilities */}
             <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-md">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-2">Omnichannel Interface</h4>
-              <p className="text-xs text-slate-300 mb-4">MSME owners interact seamlessly across Web Chat, Voice, or WhatsApp:</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setMode("web")}
-                  className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 ${mode === "web" ? 'bg-airtel-red text-white' : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'}`}
-                >
-                  <span>💻 Web Chat</span>
-                </button>
-                <button
-                  onClick={() => setMode("whatsapp")}
-                  className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 ${mode === "whatsapp" ? 'bg-emerald-600 text-white' : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'}`}
-                >
-                  <span>💬 WhatsApp</span>
-                </button>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-2">Smart AI Capabilities</h4>
+              <p className="text-xs text-slate-300 mb-3">Tailored for Indian MSMEs with voice & multilingual support:</p>
+              <div className="space-y-2 text-xs text-slate-300">
+                <div className="flex items-center space-x-2.5 bg-slate-700/40 p-2.5 rounded-xl border border-slate-700/50">
+                  <span className="text-base">🎙️</span>
+                  <div>
+                    <span className="font-bold text-white block">Voice Interaction</span>
+                    <span className="text-[11px] text-slate-400">Tap microphone to dictate in Hindi or English</span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2.5 bg-slate-700/40 p-2.5 rounded-xl border border-slate-700/50">
+                  <span className="text-base">⚡</span>
+                  <div>
+                    <span className="font-bold text-white block">1-Click Auto Checkout</span>
+                    <span className="text-[11px] text-slate-400">Directly syncs recommended bundle to cart</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Right Column: Chat Window */}
           <div className="lg:col-span-3">
-            <div className={`bg-white rounded-2xl border shadow-sm flex flex-col h-[650px] overflow-hidden ${mode === 'whatsapp' ? 'border-emerald-300' : 'border-slate-200'}`}>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[650px] overflow-hidden">
               
               {/* Chat Header */}
-              <div className={`p-4 flex justify-between items-center border-b ${mode === 'whatsapp' ? 'bg-[#075E54] text-white' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="p-4 flex justify-between items-center border-b bg-slate-50 border-slate-200">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
                     <div className="w-10 h-10 rounded-full bg-airtel-red text-white font-bold flex items-center justify-center text-base shadow">
@@ -849,7 +850,7 @@
               <label className="flex items-start space-x-3 cursor-pointer opacity-70">
                 <input type="checkbox" defaultChecked className="mt-0.5 rounded text-airtel-red focus:ring-red-500 w-4 h-4" />
                 <span className="text-slate-600">
-                  <strong>[Optional]</strong> Receive proactive activation milestones, fiber technician live GPS tracking, and e-invoices on WhatsApp.
+                  <strong>[Optional]</strong> Receive proactive activation milestones, fiber technician dispatch alerts, and e-invoices via SMS & Email.
                 </span>
               </label>
             </div>
@@ -1115,7 +1116,7 @@
           <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-4 flex justify-between items-center text-xs">
             <div>
               <span className="font-bold text-slate-800 block">Zero Need to Call Call-Centres</span>
-              <span className="text-slate-600">Your technician live location updates directly to your WhatsApp.</span>
+              <span className="text-slate-600">Track your field technician dispatch and activation timeline 24/7 on this live portal.</span>
             </div>
             <button className="bg-white border border-red-200 text-airtel-red font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-red-50">
               Download E-Contract PDF
@@ -1251,7 +1252,7 @@
                           onClick={() => alert(`Triggered priority field assignment for ${l.business_name}`)}
                           className="bg-slate-900 hover:bg-airtel-red text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
                         >
-                          {l.score_tier === 'Hot' ? '📞 Call within 2h' : '💬 Send WhatsApp'}
+                          {l.score_tier === 'Hot' ? '📞 Call within 2h' : '📧 Send Email Quote'}
                         </button>
                       </td>
                     </tr>

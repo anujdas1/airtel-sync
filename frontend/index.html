@@ -227,7 +227,9 @@
 
           {/* Main Body View */}
           <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-            {activeTab === "advisor" && <AdvisorView language={language} onApplyBundle={(prods) => { setCart(prods.map(p => ({ id: p, qty: 1 }))); setActiveTab("quote"); }} />}
+            <div className={activeTab === "advisor" ? "block" : "hidden"}>
+              <AdvisorView language={language} onApplyBundle={(prods) => { setCart(prods.map(p => ({ id: p, qty: 1 }))); setActiveTab("quote"); }} />
+            </div>
             {activeTab === "quote" && <QuoteView cart={cart} addToCart={addToCart} removeFromCart={removeFromCart} updateQty={updateQty} contractMonths={contractMonths} setContractMonths={setContractMonths} onProceedKYC={() => setActiveTab("kyc")} />}
             {activeTab === "kyc" && <KYCView onKYCApproved={(refData) => { setCurrentOrder(refData); setActiveTab("tracker"); }} />}
             {activeTab === "tracker" && <TrackerView order={currentOrder} setOrder={setCurrentOrder} />}
@@ -256,15 +258,31 @@
     // 1. AI ADVISOR VIEW
     // ==========================================
     function AdvisorView({ language, onApplyBundle }) {
-      const [messages, setMessages] = useState([
-        {
-          sender: "bot",
-          text: language === "Hindi" 
-            ? "नमस्ते! मैं रिया हूँ, आपकी एक्सेल बिज़नेस सलाहकार। आपका बिज़नेस किस चीज़ का है और आपको इंटरनेट, कॉलिंग या बिलिंग में क्या सहायता चाहिए?"
-            : "Hello! I am Riya, your Accel Business Advisor. Tell me about your business (kirana, clinic, office, factory) and what telecom or software tools you need today?",
-          recommendation: null
-        }
-      ]);
+      const [messages, setMessages] = useState(() => {
+        try {
+          const cached = sessionStorage.getItem("airtel_sync_advisor_chat");
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch (e) {}
+        return [
+          {
+            sender: "bot",
+            text: language === "Hindi" 
+              ? "नमस्ते! मैं रिया हूँ, आपकी एक्सेल बिज़नेस सलाहकार। आपका बिज़नेस किस चीज़ का है और आपको इंटरनेट, कॉलिंग या बिलिंग में क्या सहायता चाहिए?"
+              : "Hello! I am Riya, your Accel Business Advisor. Tell me about your business (kirana, clinic, office, factory) and what telecom or software tools you need today?",
+            recommendation: null
+          }
+        ];
+      });
+
+      useEffect(() => {
+        try {
+          sessionStorage.setItem("airtel_sync_advisor_chat", JSON.stringify(messages));
+        } catch (e) {}
+      }, [messages]);
+
       const [input, setInput] = useState("");
       const [loading, setLoading] = useState(false);
       const [isListening, setIsListening] = useState(false);
@@ -582,9 +600,28 @@
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Active</span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      sessionStorage.removeItem("airtel_sync_advisor_chat");
+                      setMessages([{
+                        sender: "bot",
+                        text: language === "Hindi" 
+                          ? "नमस्ते! मैं रिया हूँ, आपकी एक्सेल बिज़नेस सलाहकार। आपका बिज़नेस किस चीज़ का है और आपको इंटरनेट, कॉलिंग या बिलिंग में क्या सहायता चाहिए?"
+                          : "Hello! I am Riya, your Accel Business Advisor. Tell me about your business (kirana, clinic, office, factory) and what telecom or software tools you need today?",
+                        recommendation: null
+                      }]);
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg font-medium transition-all flex items-center space-x-1"
+                    title="Start a fresh conversation"
+                  >
+                    <span>🔄</span>
+                    <span>New Chat</span>
+                  </button>
+                  <div className="flex items-center space-x-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Active</span>
+                  </div>
                 </div>
               </div>
 

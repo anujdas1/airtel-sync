@@ -259,6 +259,9 @@
       const [loading, setLoading] = useState(false);
       const [isListening, setIsListening] = useState(false);
       const chatEndRef = useRef(null);
+      const recognitionRef = useRef(null);
+      const silenceTimerRef = useRef(null);
+      const transcriptRef = useRef("");
 
       useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -348,29 +351,104 @@
         }
       };
 
-      // Voice Input STT
+      // Stop recognition and send the complete accumulated sentence
+      const stopAndSendSentence = () => {
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {}
+        }
+        setIsListening(false);
+        const sentenceToSend = transcriptRef.current.trim();
+        transcriptRef.current = "";
+        if (sentenceToSend) {
+          setInput(sentenceToSend);
+          handleSend(sentenceToSend);
+        }
+      };
+
+      // Voice Input STT — Full-Sentence Speech Recognition with Silence Detection
       const toggleVoice = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-          alert("Speech recognition not supported in this browser. Please use Google Chrome.");
+          alert("Speech recognition is supported in Google Chrome, Microsoft Edge, and Safari.");
           return;
         }
+
+        // If already listening, clicking again finishes and sends the complete sentence immediately!
         if (isListening) {
-          setIsListening(false);
+          stopAndSendSentence();
           return;
         }
-        const recognition = new SpeechRecognition();
-        recognition.lang = language === "Hindi" ? "hi-IN" : "en-IN";
-        recognition.onstart = () => setIsListening(true);
-        recognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
-          setInput(transcript);
+
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;      // CRITICAL: keeps listening to full sentence, doesn't stop after 1st word
+          recognition.interimResults = true;  // CRITICAL: updates live transcription smoothly as words are spoken
+          recognition.lang = language === "Hindi" ? "hi-IN" : "en-IN";
+
+          transcriptRef.current = "";
+
+          recognition.onstart = () => {
+            setIsListening(true);
+          };
+
+          recognition.onresult = (event) => {
+            let finalStr = "";
+            let interimStr = "";
+
+            for (let i = 0; i < event.results.length; ++i) {
+              const res = event.results[i];
+              if (res.isFinal) {
+                finalStr += res[0].transcript + " ";
+              } else {
+                interimStr += res[0].transcript;
+              }
+            }
+
+            const fullSentence = (finalStr + interimStr).trim();
+            if (fullSentence) {
+              transcriptRef.current = fullSentence;
+              setInput(fullSentence);
+            }
+
+            // Natural pause / sentence completion detection:
+            // When user finishes speaking their complete sentence and pauses for 1.8 seconds:
+            if (silenceTimerRef.current) {
+              clearTimeout(silenceTimerRef.current);
+            }
+            silenceTimerRef.current = setTimeout(() => {
+              stopAndSendSentence();
+            }, 1800);
+          };
+
+          recognition.onerror = (event) => {
+            console.warn("Speech recognition notice:", event.error);
+            if (event.error !== "no-speech") {
+              setIsListening(false);
+              if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            }
+          };
+
+          recognition.onend = () => {
+            // If stopped by browser and we have a sentence pending, send it
+            if (transcriptRef.current.trim()) {
+              stopAndSendSentence();
+            } else {
+              setIsListening(false);
+            }
+          };
+
+          recognitionRef.current = recognition;
+          recognition.start();
+        } catch (err) {
+          console.error("Could not start speech recognition:", err);
           setIsListening(false);
-          handleSend(transcript);
-        };
-        recognition.onerror = () => setIsListening(false);
-        recognition.onend = () => setIsListening(false);
-        recognition.start();
+        }
       };
 
       return (
@@ -453,12 +531,12 @@
                 <div className="flex items-center space-x-2">
                   <button 
                     onClick={toggleVoice} 
-                    className={`p-2 rounded-xl text-xs font-semibold flex items-center space-x-1 transition-all ${
-                      isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm ${
+                      isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
-                    title="Speak in your language"
+                    title={isListening ? "Click to finish and get solution" : "Speak complete sentence"}
                   >
-                    <span>{isListening ? '🔴 Listening...' : '🎤 Voice Mode'}</span>
+                    <span>{isListening ? '🔴 Stop & Send' : '🎙️ Speak Sentence'}</span>
                   </button>
                 </div>
               </div>
@@ -532,14 +610,47 @@
                 <div ref={chatEndRef} />
               </div>
 
+              {/* Voice Listening Active Alert Banner */}
+              {isListening && (
+                <div className="px-4 py-2 bg-red-50 border-t border-red-200 flex items-center justify-between text-xs text-red-700 animate-pulse">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                    <span className="font-semibold">Listening to your complete sentence... (Speak freely; pause 1.8s or click Done to send)</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={stopAndSendSentence} 
+                    className="bg-red-600 text-white px-2.5 py-1 rounded-md text-[11px] font-bold hover:bg-red-700 shadow-sm"
+                  >
+                    Done Speaking ✓
+                  </button>
+                </div>
+              )}
+
               {/* Chat Input */}
               <div className="p-3 bg-white border-t border-slate-200">
-                <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex items-center space-x-2">
+                <form onSubmit={(e) => { e.preventDefault(); if (isListening) stopAndSendSentence(); else handleSend(); }} className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={toggleVoice}
+                    className={`p-2.5 rounded-xl border text-sm transition-all ${
+                      isListening 
+                        ? 'bg-red-500 text-white border-red-500 animate-pulse' 
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                    }`}
+                    title={isListening ? "Click to finish and send" : "Click to speak your sentence"}
+                  >
+                    🎙️
+                  </button>
                   <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={language === "Hindi" ? "अपना व्यवसाय बताएं या प्रश्न पूछें..." : "Type your business details (e.g. clinic in Kochi, needs broadband and CCTV)..."}
+                    placeholder={
+                      isListening 
+                        ? "Listening... spoken words will form full sentence here..." 
+                        : (language === "Hindi" ? "अपना व्यवसाय बताएं या माइक दबाकर बोलें..." : "Type or speak your business details (e.g. clinic in Kochi, needs broadband)...")
+                    }
                     className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-airtel-red"
                   />
                   <button

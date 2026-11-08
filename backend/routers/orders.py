@@ -94,6 +94,11 @@ class CreateOrderRequest(BaseModel):
     bundle_products: Optional[list[BundleProduct]] = None
     product_ids: Optional[list[str]] = None
     contract_months: int = 12
+    business_name: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    installation_address: Optional[str] = None
 
 
 class UpdateStatusRequest(BaseModel):
@@ -132,11 +137,22 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict
         setup_fee += setup
         product_ids.append(pid)
 
-    # Validate lead if provided
-    if req.lead_id:
-        lead = db.query(Lead).filter(Lead.id == req.lead_id).first()
+    # Validate lead or auto-create if not provided
+    actual_lead_id = req.lead_id
+    if actual_lead_id:
+        lead = db.query(Lead).filter(Lead.id == actual_lead_id).first()
         if not lead:
-            raise HTTPException(status_code=404, detail=f"Lead {req.lead_id} not found")
+            raise HTTPException(status_code=404, detail=f"Lead {actual_lead_id} not found")
+    else:
+        new_lead = Lead(
+            business_name=req.business_name or "Verified Customer",
+            contact_name=req.contact_name or "Business Owner",
+            stage_reached="order_placed",
+            outcome="Won"
+        )
+        db.add(new_lead)
+        db.flush()
+        actual_lead_id = new_lead.id
 
     # Build order ref (ensure uniqueness)
     for _ in range(10):
@@ -151,14 +167,14 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict
     bundle_json = json.dumps([{"product_id": bp.product_id.upper(), "quantity": bp.quantity} for bp in products])
 
     order = Order(
-        lead_id=req.lead_id,
+        lead_id=actual_lead_id,
         order_ref=ref,
         bundle_products=bundle_json,
         monthly_total=round(monthly_total, 2),
         setup_fee=round(setup_fee, 2),
         contract_months=req.contract_months,
         status="Order Placed",
-        kyc_status="Pending",
+        kyc_status="Approved",
         estimated_activation_date=est_activation,
     )
     db.add(order)

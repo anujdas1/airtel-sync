@@ -50,6 +50,16 @@
       50% { opacity: 0.85; transform: scale(1.02); }
     }
     .pulse-glow { animation: pulse-slow 3s infinite ease-in-out; }
+    @keyframes soundWave {
+      0%, 100% { height: 4px; }
+      50% { height: 18px; }
+    }
+    .wave-bar-1 { animation: soundWave 0.9s ease-in-out infinite; }
+    .wave-bar-2 { animation: soundWave 1.2s ease-in-out infinite 0.15s; }
+    .wave-bar-3 { animation: soundWave 0.8s ease-in-out infinite 0.3s; }
+    .wave-bar-4 { animation: soundWave 1.4s ease-in-out infinite 0.2s; }
+    .wave-bar-5 { animation: soundWave 1.0s ease-in-out infinite 0.35s; }
+    .wave-bar-6 { animation: soundWave 0.7s ease-in-out infinite 0.1s; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
@@ -273,7 +283,7 @@
 
         const newMessages = [...messages, { sender: "user", text: userText }];
         setMessages(newMessages);
-        if (!customText) setInput("");
+        setInput(""); // Always clear the input field immediately after sending
         setLoading(true);
 
         try {
@@ -365,8 +375,8 @@
         setIsListening(false);
         const sentenceToSend = transcriptRef.current.trim();
         transcriptRef.current = "";
+        setInput(""); // Ensure bottom input bar is cleared immediately
         if (sentenceToSend) {
-          setInput(sentenceToSend);
           handleSend(sentenceToSend);
         }
       };
@@ -528,16 +538,9 @@
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={toggleVoice} 
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm ${
-                      isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                    title={isListening ? "Click to finish and get solution" : "Speak complete sentence"}
-                  >
-                    <span>{isListening ? '🔴 Stop & Send' : '🎙️ Speak Sentence'}</span>
-                  </button>
+                <div className="flex items-center space-x-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Active</span>
                 </div>
               </div>
 
@@ -610,20 +613,49 @@
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Voice Listening Active Alert Banner */}
+              {/* Voice Recording Waveform Bar */}
               {isListening && (
-                <div className="px-4 py-2 bg-red-50 border-t border-red-200 flex items-center justify-between text-xs text-red-700 animate-pulse">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
-                    <span className="font-semibold">Listening to your complete sentence... (Speak freely; pause 1.8s or click Done to send)</span>
+                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs transition-all">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    {/* Animated sound wave bars */}
+                    <div className="flex items-center space-x-1 h-5 px-1 flex-shrink-0">
+                      <span className="w-1 bg-airtel-red rounded-full wave-bar-1"></span>
+                      <span className="w-1 bg-airtel-red rounded-full wave-bar-2"></span>
+                      <span className="w-1 bg-airtel-red rounded-full wave-bar-3"></span>
+                      <span className="w-1 bg-airtel-red rounded-full wave-bar-4"></span>
+                      <span className="w-1 bg-airtel-red rounded-full wave-bar-5"></span>
+                      <span className="w-1 bg-airtel-red rounded-full wave-bar-6"></span>
+                    </div>
+                    <span className="text-slate-600 font-medium text-xs truncate max-w-[280px] sm:max-w-[420px]">
+                      {input ? input : "Listening to you..."}
+                    </span>
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={stopAndSendSentence} 
-                    className="bg-red-600 text-white px-2.5 py-1 rounded-md text-[11px] font-bold hover:bg-red-700 shadow-sm"
-                  >
-                    Done Speaking ✓
-                  </button>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+                        if (recognitionRef.current) {
+                          try { recognitionRef.current.stop(); } catch(e){}
+                        }
+                        setIsListening(false);
+                        transcriptRef.current = "";
+                        setInput("");
+                      }} 
+                      className="text-slate-400 hover:text-slate-600 px-2 py-1 text-xs transition-colors"
+                      title="Cancel"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={stopAndSendSentence} 
+                      className="bg-airtel-red hover:bg-airtel-darkred text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-xs transition-all"
+                    >
+                      <span>Send</span>
+                      <span>✓</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -635,7 +667,7 @@
                     onClick={toggleVoice}
                     className={`p-2.5 rounded-xl border text-sm transition-all ${
                       isListening 
-                        ? 'bg-red-500 text-white border-red-500 animate-pulse' 
+                        ? 'bg-red-50 text-airtel-red border-red-300 ring-2 ring-red-200' 
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
                     }`}
                     title={isListening ? "Click to finish and send" : "Click to speak your sentence"}
@@ -648,8 +680,8 @@
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={
                       isListening 
-                        ? "Listening... spoken words will form full sentence here..." 
-                        : (language === "Hindi" ? "अपना व्यवसाय बताएं या माइक दबाकर बोलें..." : "Type or speak your business details (e.g. clinic in Kochi, needs broadband)...")
+                        ? "Listening... spoken words appear here..." 
+                        : (language === "Hindi" ? "अपना व्यवसाय बताएं या माइक दबाएं..." : "Type or click mic to speak your business needs...")
                     }
                     className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-airtel-red"
                   />

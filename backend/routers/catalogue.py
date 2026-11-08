@@ -9,6 +9,7 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,17 @@ def _row_to_dict(row: pd.Series) -> dict:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+@router.get("/catalogue/filters")
+@router.get("/products/filters")
+def get_filters() -> dict:
+    """Return available categories and target segments."""
+    df = get_catalogue()
+    categories = sorted(list(set(df["category"].dropna().tolist())))
+    segments = ["micro", "prof", "multi", "mfg"]
+    return {"categories": categories, "target_segments": segments}
+
+
+@router.get("/catalogue")
 @router.get("/products")
 def list_products(
     segment: Optional[str] = Query(None, description="micro|prof|multi|mfg"),
@@ -116,6 +128,7 @@ def list_products(
     return {"products": result, "total": len(result)}
 
 
+@router.get("/catalogue/{product_id}")
 @router.get("/products/{product_id}")
 def get_product(product_id: str) -> dict:
     """Return a single product by ID."""
@@ -193,3 +206,50 @@ def recommend_bundles(
         )
 
     return {"bundles": bundles[:3], "segment": segment, "city_tier": city_tier, "has_gstin": has_gstin}
+
+
+class EligibilityRequest(BaseModel):
+    num_employees: Optional[int] = 5
+    num_sites: Optional[int] = 1
+    has_gstin: Optional[bool] = False
+    segment: Optional[str] = None
+    city_tier: Optional[int] = 1
+
+
+@router.post("/catalogue/eligible")
+@router.post("/products/eligible")
+def check_eligible(req: EligibilityRequest) -> dict:
+    """Return all products matching business criteria."""
+    df = get_catalogue()
+    eligible = []
+    for _, row in df.iterrows():
+        if _eligible(row, req.segment, req.city_tier, req.has_gstin):
+            eligible.append(_row_to_dict(row))
+    return {"eligible_products": eligible, "count": len(eligible)}
+
+
+class BundlePriceRequest(BaseModel):
+    product_ids: list[str]
+
+
+@router.post("/catalogue/bundle")
+@router.post("/products/bundle")
+def calculate_bundle(req: BundlePriceRequest) -> dict:
+    """Calculate transparent total price and setup fees for custom product list."""
+    df = get_catalogue()
+    total_monthly = 0.0
+    total_setup = 0.0
+    products = []
+    for pid in req.product_ids:
+        row = df[df["product_id"] == pid.upper()]
+        if not row.empty:
+            r = row.iloc[0]
+            total_monthly += float(r["price_min_inr_per_month"])
+            total_setup += float(r["one_time_setup_inr"])
+            products.append(_row_to_dict(r))
+    return {
+        "product_ids": req.product_ids,
+        "products": products,
+        "total_monthly_inr": round(total_monthly, 2),
+        "total_setup_inr": round(total_setup, 2),
+    }

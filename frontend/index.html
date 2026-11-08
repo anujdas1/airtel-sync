@@ -60,7 +60,9 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const API_BASE = "http://localhost:8000";
+    const API_BASE = (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin.startsWith("http")) 
+      ? window.location.origin 
+      : "http://localhost:8000";
 
     // --- Synthetic Catalogue Cache for Instant Offline/Online Sync ---
     const CATALOGUE_DATA = [

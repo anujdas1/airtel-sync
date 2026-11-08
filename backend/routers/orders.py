@@ -91,7 +91,8 @@ class BundleProduct(BaseModel):
 
 class CreateOrderRequest(BaseModel):
     lead_id: Optional[int] = None
-    bundle_products: list[BundleProduct]
+    bundle_products: Optional[list[BundleProduct]] = None
+    product_ids: Optional[list[str]] = None
     contract_months: int = 12
 
 
@@ -106,8 +107,12 @@ class UpdateStatusRequest(BaseModel):
 @router.post("")
 def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict:
     """Create a new order from a bundle of products."""
-    if not req.bundle_products:
-        raise HTTPException(status_code=400, detail="bundle_products cannot be empty")
+    products = req.bundle_products or []
+    if not products and req.product_ids:
+        products = [BundleProduct(product_id=pid) for pid in req.product_ids]
+
+    if not products:
+        raise HTTPException(status_code=400, detail="bundle_products or product_ids cannot be empty")
 
     # Validate products exist
     df = get_catalogue()
@@ -115,7 +120,7 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict
     setup_fee = 0.0
     product_ids: list[str] = []
 
-    for bp in req.bundle_products:
+    for bp in products:
         pid = bp.product_id.upper()
         row = df[df["product_id"] == pid]
         if row.empty:
@@ -143,7 +148,7 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict
     max_install_days = _get_max_install_days(product_ids)
     est_activation = datetime.utcnow() + timedelta(days=max_install_days)
 
-    bundle_json = json.dumps([{"product_id": bp.product_id.upper(), "quantity": bp.quantity} for bp in req.bundle_products])
+    bundle_json = json.dumps([{"product_id": bp.product_id.upper(), "quantity": bp.quantity} for bp in products])
 
     order = Order(
         lead_id=req.lead_id,
@@ -163,8 +168,9 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict
     return {
         "order_ref": order.order_ref,
         "id": order.id,
+        "order_id": order.id,
         "lead_id": order.lead_id,
-        "bundle_products": req.bundle_products,
+        "bundle_products": products,
         "monthly_total": order.monthly_total,
         "setup_fee": order.setup_fee,
         "contract_months": order.contract_months,
@@ -177,6 +183,7 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)) -> dict
 
 
 @router.get("/track/{mobile_or_ref}")
+@router.get("/{mobile_or_ref}/track")
 def track_order(mobile_or_ref: str, db: Session = Depends(get_db)) -> dict:
     """Lookup order by order_ref or any identifier."""
     # Try by order_ref first

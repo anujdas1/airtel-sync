@@ -52,10 +52,13 @@ def get_features():
 def get_lead_score(lead_id: str):
     """Get propensity score for a specific synthetic lead ID."""
     scores = propensity_model.score_all_leads(_LEADS_CSV)
-    if lead_id not in scores:
+    target_id = lead_id.upper().strip()
+    if target_id not in scores and target_id.startswith("L") and target_id[1:].isdigit():
+        target_id = f"L{int(target_id[1:]):05d}"
+    if target_id not in scores:
         raise HTTPException(status_code=404, detail=f"Lead ID '{lead_id}' not found in registry")
     
-    score = scores[lead_id]
+    score = scores[target_id]
     tier = propensity_model.get_score_tier(score)
     
     # Recommendation logic

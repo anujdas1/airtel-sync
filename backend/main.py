@@ -83,6 +83,15 @@ app.include_router(orders.router)
 app.include_router(leads.router)
 app.include_router(scoring.router)
 
+# Aliases for scoring endpoints
+@app.get("/api/features", tags=["Scoring"])
+def features_alias():
+    return scoring.get_features()
+
+@app.post("/api/predict", tags=["Scoring"])
+def predict_alias(req: scoring.LeadPredictionRequest):
+    return scoring.predict_propensity(req)
+
 # Mount uploads directory
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 

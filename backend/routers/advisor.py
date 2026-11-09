@@ -104,7 +104,7 @@ def _get_compact_catalogue_summary() -> str:
 def _get_system_prompt() -> str:
     catalog_summary = _get_compact_catalogue_summary()
     return (
-        "You are Riya, an empathetic, smart AI business advisor for Airtel SYNC (Airtel Business).\n"
+        "You are Kaberi, an empathetic, smart AI business advisor for Airtel SYNC (Airtel Business).\n"
         "Your mission is to understand small business owners' communication and connectivity challenges, "
         "and recommend the optimal solution bundle from our catalogue.\n\n"
         "GUIDELINES:\n"
@@ -213,13 +213,13 @@ def _smart_fallback_reply(message: str, language: str, context: dict | None = No
         reason = "100 Mbps ultra-stable broadband with enterprise cyber security protection."
         if is_hindi:
             reply = (
-                "Namaste! Main Riya hoon, Airtel SYNC ki advisor. Aapke business ke liye hamara sabse popular plan "
+                "Namaste! Main Kaberi hoon, Airtel SYNC ki advisor. Aapke business ke liye hamara sabse popular plan "
                 "Business Broadband 100 Mbps (P01) aur Secure Internet (P03) ka bundle hai. "
                 "Aapko kitne staff SIM aur kis sheher mein connection chahiye?"
             )
         else:
             reply = (
-                "Hello! I am Riya, your Airtel SYNC advisor. For your business, our top recommendation is the "
+                "Hello! I am Kaberi, your Airtel SYNC advisor. For your business, our top recommendation is the "
                 "Business Broadband 100 Mbps (P01) bundled with Secure Internet Pro (P03) for seamless and secure operations."
             )
 
@@ -347,7 +347,7 @@ def get_session(session_id: str) -> SessionResponse:
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
     """
-    Send a message to Riya and get a high-speed AI response.
+    Send a message to the AI advisor and get a high-speed response.
     Latency benchmark: 1.2s - 2.0s via Gemini Flash-Lite REST.
     Guaranteed <4s SLA with smart rule-based fallback.
     """

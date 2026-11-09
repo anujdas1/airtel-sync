@@ -109,7 +109,7 @@ Airtel_Sync/
 #### Advisor Logic
 - [ ] `gemini_service.py`: Gemini 1.5 Flash, system prompt engineering
 - [ ] **System Prompt Strategy:**
-  - Persona: "Riya, your Accel Business advisor"
+  - Persona: "Kaberi, your Accel Business advisor"
   - Language detection from first message → respond in same language
   - Structured conversation flow: 5 key questions then bundle recommendation
   - Output: JSON `{recommended_products: [], reasoning: "", monthly_total: 0, language: ""}`

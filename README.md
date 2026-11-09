@@ -31,7 +31,7 @@ Accel SYNC:     [Digital Onboarding] ──> [AI Advisor] ──> [Instant Quote
 
 ## 🚀 Core Features
 
-### 1. 🤖 AI Advisor (Riya)
+### 1. 🤖 AI Advisor (Kaberi)
 * **Multilingual GenAI Engine:** Powered by **Google Gemini 3.8 Flash** with support for English, Hindi (हिंदी), Tamil (தமிழ்), Telugu (తెలుగు), and Punjabi (ਪੰਜਾਬੀ).
 * **Conversational Needs Discovery:** Asks 4–5 intuitive questions about business type, locations, employee count, and pain points rather than technical telecom codes.
 * **Intelligent Bundle Matching:** Recommends optimal bundles directly from `product_catalogue.csv` with clear, jargon-free explanations.
